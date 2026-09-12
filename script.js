@@ -1,431 +1,297 @@
 const audio = document.getElementById("audio");
-
-const playBtn = document.getElementById("playBtn");
-const playText = document.getElementById("playText");
-
-const previousBtn = document.getElementById("previousBtn");
-const nextBtn = document.getElementById("nextBtn");
-
-const progressBar = document.getElementById("progressBar");
-
-const currentTimeDisplay = document.getElementById("currentTime");
-const durationDisplay = document.getElementById("duration");
-
-const volumeBar = document.getElementById("volumeBar");
+const title = document.getElementById("title");
+const artist = document.getElementById("artist");
+const cover = document.getElementById("cover");
+const progress = document.getElementById("progress");
+const currentTime = document.getElementById("currentTime");
+const duration = document.getElementById("duration");
+const volume = document.getElementById("volume");
 const volumeValue = document.getElementById("volumeValue");
-
-const songTitle = document.getElementById("songTitle");
-const artistName = document.getElementById("artistName");
-
+const playBtn = document.getElementById("playBtn");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const shuffleBtn = document.getElementById("shuffleBtn");
+const autoplay = document.getElementById("autoplay");
+const fileInput = document.getElementById("fileInput");
 const playlistElement = document.getElementById("playlist");
 
-const autoplayToggle = document.getElementById("autoplayToggle");
-const shuffleBtn = document.getElementById("shuffleBtn");
-
-const coverLetter = document.getElementById("coverLetter");
-
-
-/*
-    Playlist
-    Replace the audio file paths with your own MP3 files.
-*/
-
-const songs = [
-    {
-        title: "Lonely At the Top",
-        artist: "Asake",
-        src: "music/lonely-at-the-top.mp3"
-    },
-    {
-        title: "City Boys",
-        artist: "Burna Boy",
-        src: "music/city-boys.mp3"
-    },
-    {
-        title: "Feel",
-        artist: "Davido",
-        src: "music/feel.mp3"
-    }
-];
-
-
-let currentSongIndex = 0;
+let songs = [];
+let currentIndex = -1;
 let isShuffle = false;
 
-
-/* Load selected song */
-
-function loadSong(index) {
-
-    currentSongIndex = index;
-
-    const song = songs[currentSongIndex];
-
-    audio.src = song.src;
-
-    songTitle.textContent = song.title;
-    artistName.textContent = song.artist;
-
-    coverLetter.textContent = song.title.charAt(0).toUpperCase();
-
-    progressBar.value = 0;
-
-    currentTimeDisplay.textContent = "0:00";
-    durationDisplay.textContent = "0:00";
-
-    updatePlaylist();
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
+  return `${mins}:${secs}`;
 }
 
+function loadSong(index, autoPlay = false) {
+  if (!songs[index]) return;
 
-/* Play song */
+  currentIndex = index;
+  const song = songs[index];
 
-function playSong() {
+  audio.src = song.url;
+  title.textContent = song.name;
+  artist.textContent = "Local music";
+  cover.textContent = song.name.charAt(0).toUpperCase();
 
-    audio.play()
-        .then(() => {
-            playText.textContent = "PAUSE";
-        })
-        .catch((error) => {
-            console.log("Audio could not be played:", error);
-        });
+  progress.value = 0;
+  currentTime.textContent = "0:00";
+  duration.textContent = "0:00";
+
+  renderPlaylist();
+
+  if (autoPlay) {
+    playSong();
+  }
 }
 
+async function playSong() {
+  if (!songs.length) {
+    fileInput.click();
+    return;
+  }
 
-/* Pause song */
+  if (currentIndex === -1) {
+    loadSong(0);
+  }
+
+  try {
+    await audio.play();
+    playBtn.textContent = "Pause";
+    playBtn.setAttribute("aria-label", "Pause");
+  } catch (error) {
+    console.log("Playback was not started:", error);
+  }
+}
 
 function pauseSong() {
-
-    audio.pause();
-
-    playText.textContent = "PLAY";
+  audio.pause();
+  playBtn.textContent = "Play";
+  playBtn.setAttribute("aria-label", "Play");
 }
-
-
-/* Play / pause button */
-
-playBtn.addEventListener("click", () => {
-
-    if (audio.paused) {
-        playSong();
-    } else {
-        pauseSong();
-    }
-
-});
-
-
-/* Next song */
 
 function nextSong() {
+  if (!songs.length) return;
 
-    if (isShuffle) {
+  let nextIndex;
 
-        let nextIndex;
+  if (isShuffle && songs.length > 1) {
+    do {
+      nextIndex = Math.floor(Math.random() * songs.length);
+    } while (nextIndex === currentIndex);
+  } else {
+    nextIndex = (currentIndex + 1) % songs.length;
+  }
 
-        do {
-            nextIndex = Math.floor(Math.random() * songs.length);
-        } while (nextIndex === currentSongIndex && songs.length > 1);
-
-        currentSongIndex = nextIndex;
-
-    } else {
-
-        currentSongIndex++;
-
-        if (currentSongIndex >= songs.length) {
-            currentSongIndex = 0;
-        }
-
-    }
-
-    loadSong(currentSongIndex);
-    playSong();
+  loadSong(nextIndex, true);
 }
-
-
-nextBtn.addEventListener("click", nextSong);
-
-
-/* Previous song */
 
 function previousSong() {
+  if (!songs.length) return;
 
-    currentSongIndex--;
+  if (audio.currentTime > 3) {
+    audio.currentTime = 0;
+    return;
+  }
 
-    if (currentSongIndex < 0) {
-        currentSongIndex = songs.length - 1;
-    }
+  const previousIndex =
+    (currentIndex - 1 + songs.length) % songs.length;
 
-    loadSong(currentSongIndex);
-    playSong();
+  loadSong(previousIndex, true);
 }
 
+function renderPlaylist() {
+  playlistElement.innerHTML = "";
 
-previousBtn.addEventListener("click", previousSong);
+  if (!songs.length) {
+    playlistElement.innerHTML = `
+      <p class="empty-message">
+        Choose MP3 files from your computer to start listening.
+      </p>
+    `;
+    return;
+  }
 
+  songs.forEach((song, index) => {
+    const item = document.createElement("div");
+    item.className = `track ${index === currentIndex ? "active" : ""}`;
 
-/* Update progress */
+    item.innerHTML = `
+      <div class="track-name">
+        <strong>${escapeHTML(song.name)}</strong>
+        <span>Local music</span>
+      </div>
+      <div>
+        <span class="track-duration">${song.duration || "--:--"}</span>
+        <button class="remove-track" type="button" aria-label="Remove ${escapeHTML(song.name)}">Remove</button>
+      </div>
+    `;
+
+    item.addEventListener("click", (event) => {
+      if (event.target.classList.contains("remove-track")) return;
+      loadSong(index, true);
+    });
+
+    item.querySelector(".remove-track").addEventListener("click", () => {
+      removeSong(index);
+    });
+
+    playlistElement.appendChild(item);
+  });
+}
+
+function removeSong(index) {
+  const wasCurrent = index === currentIndex;
+  const removedUrl = songs[index]?.url;
+
+  if (removedUrl) URL.revokeObjectURL(removedUrl);
+
+  songs.splice(index, 1);
+
+  if (!songs.length) {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    currentIndex = -1;
+    title.textContent = "No song selected";
+    artist.textContent = "Add music to your playlist";
+    cover.textContent = "M";
+    progress.value = 0;
+    currentTime.textContent = "0:00";
+    duration.textContent = "0:00";
+    pauseSong();
+  } else if (wasCurrent) {
+    const newIndex = Math.min(index, songs.length - 1);
+    loadSong(newIndex, false);
+    pauseSong();
+  } else if (index < currentIndex) {
+    currentIndex--;
+  }
+
+  renderPlaylist();
+}
+
+function escapeHTML(value) {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
+}
+
+fileInput.addEventListener("change", (event) => {
+  const files = Array.from(event.target.files || [])
+    .filter(file => file.type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a)$/i.test(file.name));
+
+  files.forEach(file => {
+    const url = URL.createObjectURL(file);
+
+    const song = {
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      url,
+      duration: null
+    };
+
+    songs.push(song);
+
+    const tempAudio = new Audio();
+    tempAudio.preload = "metadata";
+    tempAudio.src = url;
+
+    tempAudio.addEventListener("loadedmetadata", () => {
+      song.duration = formatTime(tempAudio.duration);
+      renderPlaylist();
+    }, { once: true });
+  });
+
+  if (currentIndex === -1 && songs.length) {
+    loadSong(0, false);
+  } else {
+    renderPlaylist();
+  }
+
+  fileInput.value = "";
+});
+
+playBtn.addEventListener("click", () => {
+  if (audio.paused) {
+    playSong();
+  } else {
+    pauseSong();
+  }
+});
+
+prevBtn.addEventListener("click", previousSong);
+nextBtn.addEventListener("click", nextSong);
 
 audio.addEventListener("timeupdate", () => {
+  if (!audio.duration) return;
 
-    if (!audio.duration) {
-        return;
-    }
-
-    const progress = (audio.currentTime / audio.duration) * 100;
-
-    progressBar.value = progress;
-
-    currentTimeDisplay.textContent =
-        formatTime(audio.currentTime);
-
+  progress.value = (audio.currentTime / audio.duration) * 100;
+  currentTime.textContent = formatTime(audio.currentTime);
 });
-
-
-/* Load duration */
 
 audio.addEventListener("loadedmetadata", () => {
-
-    durationDisplay.textContent =
-        formatTime(audio.duration);
-
+  duration.textContent = formatTime(audio.duration);
 });
-
-
-/* Seek through song */
-
-progressBar.addEventListener("input", () => {
-
-    if (!audio.duration) {
-        return;
-    }
-
-    const newTime =
-        (progressBar.value / 100) * audio.duration;
-
-    audio.currentTime = newTime;
-
-});
-
-
-/* Volume */
-
-volumeBar.addEventListener("input", () => {
-
-    audio.volume = volumeBar.value;
-
-    const percentage =
-        Math.round(volumeBar.value * 100);
-
-    volumeValue.textContent = `${percentage}%`;
-
-});
-
-
-/* Autoplay */
 
 audio.addEventListener("ended", () => {
-
-    if (autoplayToggle.checked) {
-
-        nextSong();
-
-    } else {
-
-        playText.textContent = "PLAY";
-        progressBar.value = 0;
-
-    }
-
+  if (autoplay.checked) {
+    nextSong();
+  } else {
+    pauseSong();
+  }
 });
 
+progress.addEventListener("input", () => {
+  if (!audio.duration) return;
 
-/* Shuffle */
+  audio.currentTime = (progress.value / 100) * audio.duration;
+});
+
+volume.addEventListener("input", () => {
+  audio.volume = volume.value / 100;
+  volumeValue.textContent = `${volume.value}%`;
+});
 
 shuffleBtn.addEventListener("click", () => {
-
-    isShuffle = !isShuffle;
-
-    shuffleBtn.classList.toggle("active", isShuffle);
-
+  isShuffle = !isShuffle;
+  shuffleBtn.classList.toggle("active", isShuffle);
+  shuffleBtn.textContent = isShuffle ? "Shuffle On" : "Shuffle";
 });
-
-
-/* Playlist */
-
-function createPlaylist() {
-
-    playlistElement.innerHTML = "";
-
-    songs.forEach((song, index) => {
-
-        const item = document.createElement("div");
-
-        item.classList.add("playlist-item");
-
-        item.innerHTML = `
-            <div class="track-info">
-
-                <span class="track-number">
-                    ${String(index + 1).padStart(2, "0")}
-                </span>
-
-                <div>
-                    <div class="track-title">
-                        ${song.title}
-                    </div>
-
-                    <div class="track-artist">
-                        ${song.artist}
-                    </div>
-                </div>
-
-            </div>
-
-            <span class="track-duration">
-                --
-            </span>
-        `;
-
-        item.addEventListener("click", () => {
-
-            loadSong(index);
-            playSong();
-
-        });
-
-        playlistElement.appendChild(item);
-
-    });
-
-    updatePlaylist();
-
-}
-
-
-/* Highlight active song */
-
-function updatePlaylist() {
-
-    const playlistItems =
-        document.querySelectorAll(".playlist-item");
-
-    playlistItems.forEach((item, index) => {
-
-        item.classList.toggle(
-            "active",
-            index === currentSongIndex
-        );
-
-    });
-
-}
-
-
-/* Format time */
-
-function formatTime(seconds) {
-
-    if (isNaN(seconds)) {
-        return "0:00";
-    }
-
-    const minutes =
-        Math.floor(seconds / 60);
-
-    const remainingSeconds =
-        Math.floor(seconds % 60);
-
-    return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
-
-}
-
-
-/* Keyboard controls */
 
 document.addEventListener("keydown", (event) => {
+  const tag = document.activeElement.tagName.toLowerCase();
 
-    /*
-        Space = Play/Pause
-        Arrow Right = Forward 5 seconds
-        Arrow Left = Back 5 seconds
-        Arrow Up = Increase volume
-        Arrow Down = Decrease volume
-    */
+  if (tag === "input" || tag === "button") return;
 
-    if (
-        event.target.tagName === "INPUT"
-    ) {
-        return;
-    }
+  if (event.code === "Space") {
+    event.preventDefault();
+    if (audio.paused) playSong();
+    else pauseSong();
+  }
 
-    if (event.code === "Space") {
+  if (event.key === "ArrowRight" && audio.duration) {
+    audio.currentTime = Math.min(audio.currentTime + 5, audio.duration);
+  }
 
-        event.preventDefault();
+  if (event.key === "ArrowLeft" && audio.duration) {
+    audio.currentTime = Math.max(audio.currentTime - 5, 0);
+  }
 
-        if (audio.paused) {
-            playSong();
-        } else {
-            pauseSong();
-        }
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    volume.value = Math.min(Number(volume.value) + 5, 100);
+    volume.dispatchEvent(new Event("input"));
+  }
 
-    }
-
-    if (event.code === "ArrowRight") {
-
-        audio.currentTime =
-            Math.min(
-                audio.currentTime + 5,
-                audio.duration || audio.currentTime
-            );
-
-    }
-
-    if (event.code === "ArrowLeft") {
-
-        audio.currentTime =
-            Math.max(
-                audio.currentTime - 5,
-                0
-            );
-
-    }
-
-    if (event.code === "ArrowUp") {
-
-        event.preventDefault();
-
-        audio.volume =
-            Math.min(audio.volume + 0.1, 1);
-
-        volumeBar.value = audio.volume;
-
-        volumeValue.textContent =
-            `${Math.round(audio.volume * 100)}%`;
-
-    }
-
-    if (event.code === "ArrowDown") {
-
-        event.preventDefault();
-
-        audio.volume =
-            Math.max(audio.volume - 0.1, 0);
-
-        volumeBar.value = audio.volume;
-
-        volumeValue.textContent =
-            `${Math.round(audio.volume * 100)}%`;
-
-    }
-
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    volume.value = Math.max(Number(volume.value) - 5, 0);
+    volume.dispatchEvent(new Event("input"));
+  }
 });
 
-
-/* Initialize player */
-
 audio.volume = 0.8;
-
-loadSong(0);
-
-createPlaylist();
+renderPlaylist();

@@ -3,88 +3,99 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>Music Player</title>
-
     <link rel="stylesheet" href="style.css" />
   </head>
-
   <body>
-    <main class="player">
+    <main class="app">
       <section class="player-card">
-        <div class="player-header">
+        <div class="topbar">
           <div>
-            <p class="eyebrow">NOW PLAYING</p>
-            <h1>Music Player</h1>
+            <span class="eyebrow">NOW PLAYING</span>
+            <h1>Arinze Aneke Music Player</h1>
           </div>
-
-          <button id="shuffleBtn" class="icon-btn" title="Shuffle">
-            <span>Arizona Digital DJ MIX</span>
+          <button
+            id="shuffleBtn"
+            class="icon-button"
+            type="button"
+            aria-label="Toggle shuffle"
+          >
+            Shuffle
           </button>
         </div>
 
-        <div class="album-area">
-          <div class="album-cover">
-            <div class="cover-inner">
-              <span id="coverLetter">M</span>
-            </div>
-          </div>
+        <div class="cover" id="cover">M</div>
 
-          <div class="song-details">
-            <h2 id="songTitle">Lonely At the Top</h2>
-            <p id="artistName">Asake</p>
-          </div>
+        <div class="track-info">
+          <h2 id="title">No song selected</h2>
+          <p id="artist">Add music to your playlist</p>
         </div>
 
-        <audio id="audio"></audio>
-        <div class="progress-section">
-          <input type="range" id="progressBar" min="0" max="100" value="0" />
+        <audio id="audio" preload="metadata"></audio>
 
-          <div class="time-display">
+        <div class="progress-area">
+          <input
+            id="progress"
+            type="range"
+            min="0"
+            max="100"
+            value="0"
+            aria-label="Song progress"
+          />
+          <div class="time-row">
             <span id="currentTime">0:00</span>
             <span id="duration">0:00</span>
           </div>
         </div>
 
         <div class="controls">
-          <button id="previousBtn" class="control-btn" title="Previous">
-            <span>PREV</span>
+          <button id="prevBtn" type="button" aria-label="Previous song">
+            Previous
           </button>
-
-          <button id="playBtn" class="play-btn" title="Play">
-            <span id="playText">PLAY</span>
+          <button
+            id="playBtn"
+            class="play-button"
+            type="button"
+            aria-label="Play"
+          >
+            Play
           </button>
-
-          <button id="nextBtn" class="control-btn" title="Next">
-            <span>NEXT</span>
+          <button id="nextBtn" type="button" aria-label="Next song">
+            Next
           </button>
         </div>
 
-        <div class="volume-section">
-          <span class="volume-label">VOLUME</span>
-
-          <input
-            type="range"
-            id="volumeBar"
-            min="0"
-            max="1"
-            step="0.01"
-            value="0.8"
-          />
-
+        <div class="volume-area">
+          <label for="volume">Volume</label>
+          <input id="volume" type="range" min="0" max="100" value="80" />
           <span id="volumeValue">80%</span>
         </div>
 
         <div class="playlist-header">
-          <h3>Playlist</h3>
-
+          <div>
+            <span class="eyebrow">YOUR MUSIC</span>
+            <h3>Playlist</h3>
+          </div>
           <label class="autoplay">
-            <input type="checkbox" id="autoplayToggle" checked />
-            <span>Autoplay</span>
+            <input id="autoplay" type="checkbox" checked />
+            Autoplay
           </label>
         </div>
 
-        <div id="playlist" class="playlist"></div>
+        <label class="upload-button" for="fileInput">Add MP3 files</label>
+        <input
+          id="fileInput"
+          type="file"
+          accept="audio/*,.mp3,.wav,.ogg,.m4a"
+          multiple
+          hidden
+        />
+
+        <div id="playlist" class="playlist">
+          <p class="empty-message">
+            Choose MP3 files from your computer to start listening.
+          </p>
+        </div>
       </section>
     </main>
 
